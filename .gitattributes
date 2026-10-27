@@ -1,0 +1,7 @@
+# Fine riga LF nel repository su ogni sistema operativo (Windows, macOS, CI Linux)
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.woff2 binary

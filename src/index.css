@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+/*
+ * Speedy Sport 24 — design tokens.
+ * Palette estratta dal logo:
+ *   - brand  (blu oceano)        → primary #0064C8 (brand-600), primary dark #0047AB (brand-700)
+ *   - accent (giallo energetico) → #FFB800 (accent-500) per CTA, badge e il "24"
+ *   - surface (neutral light)    → #F8FAFC per gli sfondi
+ */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Saira Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9ebff;
+  --color-brand-200: #b5d7ff;
+  --color-brand-300: #84bcfa;
+  --color-brand-400: #4a98ec;
+  --color-brand-500: #1a7adb;
+  --color-brand-600: #0064c8;
+  --color-brand-700: #0047ab;
+  --color-brand-800: #063a8a;
+  --color-brand-900: #0b3170;
+  --color-brand-950: #0a1f47;
+
+  --color-accent-50: #fffaeb;
+  --color-accent-100: #fff1c6;
+  --color-accent-200: #ffe288;
+  --color-accent-300: #ffd04a;
+  --color-accent-400: #ffc21f;
+  --color-accent-500: #ffb800;
+  --color-accent-600: #e09a00;
+  --color-accent-700: #b87400;
+  --color-accent-800: #945a06;
+  --color-accent-900: #7a4a0b;
+  --color-accent-950: #462600;
+
+  --color-surface: #f8fafc;
+  --color-ink: #0b1b33;
+
+  --animate-fade-up: fade-up 0.5s ease-out both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 7rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
