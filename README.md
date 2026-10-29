@@ -1,6 +1,7 @@
-# Speedy Sport 24 — Prototipo vetrina MVP
+# SpeedySport24 — Prototipo MVP
 
-Marketplace C2C di articoli sportivi usati: l'immediatezza di Vinted con la struttura per categorie di Immobiliare.it.
+**Tutto lo sport. Un solo posto.** Il marketplace verticale dell'attrezzatura sportiva: nuovo, fine serie e usato,
+da negozi e privati, con la precisione di ricerca di un portale come Immobiliare.it.
 
 ## Avvio
 
@@ -11,104 +12,95 @@ npm run build      # type-check (tsc -b) + build di produzione in dist/
 npm run lint       # oxlint
 ```
 
-Richiede Node.js 20.19+ o 22.12+.
+Richiede Node.js 20.19+ o 22.12+. Il deploy è su Vercel: ogni push su `main` pubblica il sito
+(`vercel.json` reindirizza tutte le rotte a `index.html`, così i link diretti agli annunci funzionano).
+
+## Cosa c'è nel prototipo
+
+| Pagina | Rotta | Contenuto |
+| --- | --- | --- |
+| Home | `/` | Ricerca centrale, sport per immagini, nuovo e fine serie dai negozi, appena pubblicati, vicino a te, negozi vs privati, Secondo Tempo |
+| Ricerca | `/cerca?…` | Filtri generali + filtri tecnici per sottocategoria, conteggi per opzione, chip rimovibili, suggerimenti a zero risultati |
+| Annuncio | `/annuncio/:id` | Galleria, scheda tecnica omogenea, condizioni e difetti, consegna/pagamento/garanzie, fascia di prezzo comparabile, condividi, segnala |
+| Negozio | `/negozio/:id` | Vetrina professionale: contatti, orari, condizioni di vendita, prodotti filtrabili per tipologia |
+| Preferiti | `/preferiti` | Annunci salvati sul dispositivo, senza account |
+
+Volutamente **non** attivi (e dichiarati come tali nell'interfaccia): account, pubblicazione con assistente IA,
+messaggistica reale, pagamenti, badge "24H". Nessun prezzo barrato o sconto non verificabile.
 
 ## Stack
 
 | Ambito | Scelta | Perché |
 | --- | --- | --- |
 | Build | Vite 8 + React 19 | Dev server istantaneo, build veloci |
+| Rotte | React Router 7 (data router, pagine caricate on demand) | URL condivisibili, code splitting, strada aperta a SSR |
 | Linguaggio | TypeScript (strict, `noUncheckedIndexedAccess`) | Contratti dati espliciti, refactoring sicuro |
 | Stile | Tailwind CSS v4 (config CSS-first in `src/index.css`) | Token del brand in un unico posto |
 | Icone | lucide-react (+ 2 icone custom: tennis, basket) | Stile coerente, tree-shaking |
 | UI accessibile | Headless UI (Dialog, Switch) | Focus trap, Esc, scroll lock, ARIA |
 | Animazioni | Motion (`motion/react`) | Micro-interazioni, rispetta "Riduci movimento" |
-| Utility | clsx + tailwind-merge (`cn()`) | Classi condizionali senza conflitti |
 | Font | Inter + Saira (self-hosted via Fontsource) | Nessuna chiamata a Google Fonts (GDPR) |
 
-## Palette del brand
+## Modello dati
 
-Estratta dal logo e definita come token in `src/index.css` (`@theme`):
+- **Tassonomia** (`src/config/taxonomy.ts`): sport → sottocategorie (con macro-categoria trasversale),
+  tipologie d'offerta (`nuovo`, `fine-serie`, `mai-usato`, `usato`) raggruppate in tre famiglie, condizioni dell'usato.
+- **Attributi tecnici** (`src/config/attributes.ts`): definiti una volta (tipo, opzioni, unità) e assegnati alle
+  sottocategorie. Guidano scheda tecnica, filtri e validazione; diventeranno la tabella `attribute_definitions`
+  e lo schema del form di pubblicazione / dell'assistente IA.
+- **Venditori** (`Seller = PrivateSeller | ShopSeller`): il negozio ha profilo professionale, P.IVA, orari e
+  condizioni di vendita. Il badge di verifica compare solo se `verifiedAt` è valorizzato.
+- **Annuncio**: marca, modello, attributi strutturati, difetti dichiarati, consegna (spedizione con costo /
+  ritiro), stato (`disponibile` · `riservato` · `venduto`), quantità. Prezzi in centesimi, date ISO.
+- Il repository mock valida in sviluppo che gli attributi appartengano alla sottocategoria.
 
-| Token | Valore | Uso |
-| --- | --- | --- |
-| `brand-600` | `#0064C8` | Primary: link, bottoni primari, focus |
-| `brand-700` | `#0047AB` | Primary dark: hover, wordmark |
-| `brand-950` | `#0A1F47` | Hero, footer, testi su giallo |
-| `accent-500` | `#FFB800` | CTA ("+ Vendi Usato", "Contatta Venditore"), badge 24h |
-| `surface` | `#F8FAFC` | Sfondo pagina |
-
-Ogni colore ha la scala completa 50–950 (`bg-brand-50`, `text-accent-700`, …).
-Il giallo si usa come **sfondo** con testo `brand-950` (contrasto AA); mai come colore del testo su bianco.
+Nomi, negozi, indirizzi e partite IVA nei dati dimostrativi sono di fantasia; le foto sono di Unsplash e non
+rappresentano gli oggetti in vendita (negli annunci reali dovranno esserlo).
 
 ## Struttura
 
 ```
 src/
-├── components/
-│   ├── layout/            Header, Footer
-│   └── ui/                Atomi riutilizzabili: Button, Badge, Logo, SportIcon, Toast
+├── app/                   Router, layout, percorsi, messaggi "in arrivo"
+├── pages/                 Home, Ricerca, Annuncio, Negozio, Preferiti, 404
+├── components/            layout/ (Header, Footer) · ui/ (Button, Badge, Logo, Breadcrumbs, Toast…)
 ├── features/
-│   ├── home/components/   Hero (ricerca a 3 filtri), carosello sport, banner "Vendi"
+│   ├── home/components/   Hero, sport, vicino a te, negozi vs privati, Secondo Tempo, vendi
+│   ├── search/components/ Pannello filtri, barra tipologia/venditore, toolbar, zero risultati, filtri mobile
 │   └── listings/
 │       ├── api/           listingsRepository → unico punto di accesso ai dati
-│       ├── components/    Card, griglia, toolbar filtri, modale dettaglio, galleria, venditore
-│       ├── hooks/         useListings, useListingFilters, useFilteredListings, useFavorites
-│       └── lib/           filterListings (logica pura: filtro, ordinamento, conteggi)
-├── config/taxonomy.ts     Sport, categorie, stati d'usura
-├── mocks/                 Dati finti in forma "riga di database" (listings, sellers)
+│       ├── components/    Card, griglia, carosello, galleria, scheda annuncio, venditore, contatto
+│       ├── hooks/         useListings, useListingFilters (URL), useFilteredListings, useFavorites, usePreferredPlace
+│       └── lib/           filterListings (filtri, conteggi, suggerimenti), filtersUrl, priceInsight
+├── config/                taxonomy, attributes, places (gazetteer + distanze)
+├── mocks/                 Dati dimostrativi in forma "riga di database"
 ├── types/                 Modello di dominio condiviso
-├── lib/                   cn, format (Intl it-IT), images (CDN), text, dom
-└── pages/HomePage.tsx     Composizione della pagina e stato condiviso
+└── lib/                   format, images, search (tollerante ai refusi), store, geolocation, hooks
 ```
 
 Principi:
 
-- **Logica separata dalla UI**: i componenti ricevono dati e callback; stato e regole vivono negli hook e in `lib/`.
-- **Un'unica fonte di verità per i filtri**: header, hero, carosello e toolbar modificano lo stesso stato,
-  sincronizzato con la query string (`/?sport=calcio&luogo=milano&spedizione24h=1` è condivisibile).
-- **Prezzi in centesimi** (interi) e date ISO 8601: pronti per Postgres/Firestore.
+- **L'URL è l'unica fonte di verità della ricerca**: `/cerca?sottocategoria=biciclette&taglia-telaio=m&prezzo-max=1500`
+  è condivisibile, sopravvive al refresh e funziona con avanti/indietro.
+- **Logica separata dalla UI**: filtri, conteggi e fascia di prezzo sono funzioni pure in `features/listings/lib`.
+- **Niente promesse non mantenute**: ciò che non esiste ancora è etichettato "in arrivo" o spiegato come demo.
 
-## Integrazione backend (Supabase / Firebase)
+## Integrazione backend (Supabase consigliato)
 
-La UI dipende solo dall'interfaccia `ListingsRepository` (`src/features/listings/api/listingsRepository.ts`).
-Per passare ai dati reali:
+La UI dipende solo dall'interfaccia `ListingsRepository`. Per passare ai dati reali:
 
-1. Creare le tabelle partendo dai tipi: `ListingRecord` → `listings` (con `seller_id`), `Seller` → `profiles`,
-   tassonomia → `sports` / `categories` (o enum).
-2. Implementare il repository, ad esempio:
+1. Tabelle: `sports`, `subcategories`, `attribute_definitions`, `listings` (attributi in `jsonb`, indicizzati
+   con GIN), `profiles` + `shops`, `favorites`, `saved_searches`, `reports`. Località con PostGIS per il raggio.
+2. Implementare `createSupabaseListingsRepository(supabase)` e sostituire l'export `listingsRepository`.
+3. Con cataloghi grandi filtri e conteggi passano lato server: `ListingFilters` è già serializzabile e diventa
+   il payload della query; la ricerca tollerante ai refusi si sposta su `pg_trgm` o un motore dedicato.
 
-   ```ts
-   export function createSupabaseListingsRepository(supabase: SupabaseClient): ListingsRepository {
-     return {
-       async list({ signal } = {}) {
-         const { data, error } = await supabase
-           .from('listings')
-           .select('*, seller:profiles(*)')
-           .abortSignal(signal!)
-         if (error) throw error
-         return data.map(mapRowToListing) // snake_case → camelCase
-       },
-       // getById …
-     }
-   }
-   ```
-
-3. Sostituire l'export `listingsRepository`. Hook e componenti restano invariati.
-
-Con cataloghi grandi, il filtro si sposta lato server: `ListingFilters` è già serializzabile e diventa
-il payload della query (es. `.ilike('title', …)`, `.eq('sport_id', …)`, paginazione con `.range()`).
-A quel punto conviene introdurre TanStack Query per cache e revalidazione.
+Per l'indicizzazione delle pagine annuncio serve il rendering lato server (React Router in modalità framework
+o Next.js): le rotte e i componenti attuali sono già organizzati per quel passaggio.
 
 ## Accessibilità
 
-- Navigazione completa da tastiera, focus visibile, skip link "Vai agli annunci", scorciatoia `/` per la ricerca.
-- Card con pattern "stretched link" (nessun elemento interattivo annidato).
-- Modale con focus trap, chiusura con `Esc` e ritorno del focus alla card; galleria con frecce ← →, swipe e annunci `aria-live`.
+- Navigazione completa da tastiera, focus visibile, skip link, scorciatoia `/` per la ricerca.
+- Filtri con veri radio/checkbox, conteggi annunciati, chip rimovibili con etichetta esplicita.
+- Card con pattern "stretched link"; galleria con frecce ← →, swipe e annunci `aria-live`.
 - Animazioni disattivate se il sistema operativo richiede "Riduci movimento".
-
-## Note sul prototipo
-
-- I dati sono dimostrativi; le foto provengono da Unsplash.
-- "Accedi", "Vendi Usato" e l'invio del messaggio al venditore sono simulati (toast / stato di conferma).
-- I preferiti sono salvati in `localStorage`.

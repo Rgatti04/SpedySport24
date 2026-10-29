@@ -4,15 +4,18 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import type { Listing } from '@/types'
 import { FavoriteButton } from './FavoriteButton'
-
-const QUICK_MESSAGES = [
-  'È ancora disponibile?',
-  'Accetteresti un’offerta?',
-  'Puoi spedire con Spedizione 24h?',
-  'Posso vederlo dal vivo?',
-]
+import { ShareButton } from './ShareButton'
 
 type Step = 'idle' | 'composing' | 'sent'
+
+function getQuickMessages(listing: Listing): string[] {
+  return [
+    'È ancora disponibile?',
+    listing.delivery.shipping ? 'Quanto costa la spedizione verso di me?' : null,
+    listing.delivery.pickup ? 'Posso vederlo dal vivo?' : null,
+    listing.seller.kind === 'negozio' ? 'È disponibile in altre misure?' : 'Puoi mandarmi altre foto dei dettagli?',
+  ].filter((message): message is string => message !== null)
+}
 
 interface ContactSellerPanelProps {
   listing: Listing
@@ -25,26 +28,29 @@ export function ContactSellerPanel({ listing, isFavorite, onToggleFavorite }: Co
   const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const sellerName = listing.seller.displayName
+  const isShop = listing.seller.kind === 'negozio'
+  const isSold = listing.status === 'venduto'
 
   useEffect(() => {
     if (step === 'composing') textareaRef.current?.focus()
   }, [step])
 
   function startComposing() {
-    setMessage(`Ciao ${sellerName.split(' ')[0]}, sono interessato/a a “${listing.title}”. `)
+    const greeting = isShop ? `Buongiorno, ` : `Ciao ${sellerName.split(' ')[0]}, `
+    setMessage(`${greeting}sono interessato/a a “${listing.title}”. `)
     setStep('composing')
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!message.trim()) return
-    // Prototipo: qui andrà la chiamata all'API di messaggistica.
+    // Prototipo: qui andrà la chiamata all'API di messaggistica interna.
     setStep('sent')
   }
 
   return (
     <div>
-      <div className="flex gap-3">
+      <div className="flex gap-2.5">
         <Button
           variant="accent"
           size="lg"
@@ -52,12 +58,13 @@ export function ContactSellerPanel({ listing, isFavorite, onToggleFavorite }: Co
           onClick={startComposing}
           aria-expanded={step === 'composing'}
           aria-controls="contact-seller-form"
-          disabled={step === 'composing'}
+          disabled={step === 'composing' || isSold}
         >
           <MessageCircle className="size-5" strokeWidth={2.5} aria-hidden="true" />
-          Contatta Venditore
+          {isSold ? 'Articolo venduto' : isShop ? 'Contatta il negozio' : 'Contatta il venditore'}
         </Button>
         <FavoriteButton variant="outline" isFavorite={isFavorite} onToggle={onToggleFavorite} />
+        <ShareButton title={listing.title} />
       </div>
 
       <AnimatePresence initial={false} mode="wait">
@@ -77,7 +84,7 @@ export function ContactSellerPanel({ listing, isFavorite, onToggleFavorite }: Co
                 Messaggio per {sellerName}
               </label>
               <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Messaggi rapidi">
-                {QUICK_MESSAGES.map((quick) => (
+                {getQuickMessages(listing).map((quick) => (
                   <button
                     key={quick}
                     type="button"
@@ -126,9 +133,9 @@ export function ContactSellerPanel({ listing, isFavorite, onToggleFavorite }: Co
           >
             <CheckCircle2 className="size-5 shrink-0 text-emerald-600" aria-hidden="true" />
             <div>
-              <p className="font-semibold">Messaggio inviato a {sellerName}!</p>
+              <p className="font-semibold">Messaggio pronto per {sellerName}</p>
               <p className="mt-0.5 text-emerald-800">
-                Ti avviseremo appena risponde. <span className="text-emerald-700/80">(Demo: nessun messaggio viene realmente inviato.)</span>
+                Demo: la messaggistica interna arriverà con gli account, quindi nessun messaggio viene realmente inviato.
               </p>
               <button
                 type="button"

@@ -1,42 +1,39 @@
-import { useCallback, useEffect, useState } from 'react'
-import { listingsRepository } from '../api/listingsRepository'
+import { useEffect } from 'react'
+import { createStore, useStore } from '@/lib/store'
 import type { Listing } from '@/types'
+import { listingsRepository } from '../api/listingsRepository'
 
 export type RequestStatus = 'loading' | 'success' | 'error'
 
 interface ListingsState {
-  status: RequestStatus
+  status: RequestStatus | 'idle'
   listings: Listing[]
   error: Error | null
 }
 
-/** Carica il catalogo dal repository, con gestione di loading/errore e annullamento. */
+/** Catalogo condiviso tra le pagine: caricato una volta, poi servito dalla memoria. */
+const listingsStore = createStore<ListingsState>({ status: 'idle', listings: [], error: null })
+
+function loadListings() {
+  listingsStore.set((previous) => ({ ...previous, status: 'loading', error: null }))
+  listingsRepository.list().then(
+    (listings) => listingsStore.set({ status: 'success', listings, error: null }),
+    (error: unknown) =>
+      listingsStore.set({
+        status: 'error',
+        listings: [],
+        error: error instanceof Error ? error : new Error('Errore sconosciuto'),
+      }),
+  )
+}
+
 export function useListings() {
-  const [state, setState] = useState<ListingsState>({ status: 'loading', listings: [], error: null })
-  const [attempt, setAttempt] = useState(0)
+  const state = useStore(listingsStore)
 
   useEffect(() => {
-    const controller = new AbortController()
-
-    listingsRepository
-      .list({ signal: controller.signal })
-      .then((listings) => setState({ status: 'success', listings, error: null }))
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        setState({
-          status: 'error',
-          listings: [],
-          error: error instanceof Error ? error : new Error('Errore sconosciuto'),
-        })
-      })
-
-    return () => controller.abort()
-  }, [attempt])
-
-  const retry = useCallback(() => {
-    setState((prev) => ({ ...prev, status: 'loading', error: null }))
-    setAttempt((value) => value + 1)
+    if (listingsStore.get().status === 'idle') loadListings()
   }, [])
 
-  return { ...state, retry }
+  const status: RequestStatus = state.status === 'idle' ? 'loading' : state.status
+  return { status, listings: state.listings, error: state.error, retry: loadListings }
 }

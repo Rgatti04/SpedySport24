@@ -1,73 +1,53 @@
-import { useCallback, useEffect, useState } from 'react'
-import { isCategoryId, isSportId } from '@/config/taxonomy'
-import type { ListingFilters } from '@/types'
-import { countActiveFilters, DEFAULT_FILTERS, isSortOption } from '../lib/filterListings'
+import { useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router'
+import type { AttributeFilterValue, AttributeKey, ListingFilters } from '@/types'
+import { DEFAULT_FILTERS, getFilterChips, normalizeFilters } from '../lib/filterListings'
+import { parseFilters, serializeFilters } from '../lib/filtersUrl'
 
 export type SetFilter = <K extends keyof ListingFilters>(key: K, value: ListingFilters[K]) => void
-
-/** Nomi dei parametri URL (in italiano, condivisibili: /?sport=calcio&luogo=milano). */
-const PARAMS = {
-  query: 'q',
-  sport: 'sport',
-  category: 'categoria',
-  location: 'luogo',
-  fastShippingOnly: 'spedizione24h',
-  sort: 'ordina',
-} as const satisfies Record<keyof ListingFilters, string>
-
-function readFiltersFromUrl(): ListingFilters {
-  const params = new URLSearchParams(window.location.search)
-  const sport = params.get(PARAMS.sport)
-  const category = params.get(PARAMS.category)
-  const sort = params.get(PARAMS.sort)
-
-  return {
-    query: params.get(PARAMS.query) ?? '',
-    sport: isSportId(sport) ? sport : null,
-    category: isCategoryId(category) ? category : null,
-    location: params.get(PARAMS.location) ?? '',
-    fastShippingOnly: params.get(PARAMS.fastShippingOnly) === '1',
-    sort: isSortOption(sort) ? sort : DEFAULT_FILTERS.sort,
-  }
-}
-
-function writeFiltersToUrl(filters: ListingFilters) {
-  const params = new URLSearchParams()
-  if (filters.query.trim()) params.set(PARAMS.query, filters.query.trim())
-  if (filters.sport) params.set(PARAMS.sport, filters.sport)
-  if (filters.category) params.set(PARAMS.category, filters.category)
-  if (filters.location.trim()) params.set(PARAMS.location, filters.location.trim())
-  if (filters.fastShippingOnly) params.set(PARAMS.fastShippingOnly, '1')
-  if (filters.sort !== DEFAULT_FILTERS.sort) params.set(PARAMS.sort, filters.sort)
-
-  const search = params.toString()
-  const url = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
-  window.history.replaceState(window.history.state, '', url)
-}
+export type SetAttributeFilter = (key: AttributeKey, value: AttributeFilterValue | null) => void
+export type UpdateFilters = (update: (current: ListingFilters) => ListingFilters) => void
 
 /**
- * Stato dei filtri (unica fonte di verità per header, hero, categorie e griglia),
- * sincronizzato con la query string per ricerche condivisibili.
+ * Stato della ricerca con l'URL come unica fonte di verità: ogni ricerca è condivisibile,
+ * sopravvive al refresh e funziona con avanti/indietro del browser.
  */
 export function useListingFilters() {
-  const [filters, setFilters] = useState<ListingFilters>(readFiltersFromUrl)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo(() => parseFilters(searchParams), [searchParams])
 
-  useEffect(() => {
-    writeFiltersToUrl(filters)
-  }, [filters])
+  const updateFilters = useCallback<UpdateFilters>(
+    (update) => {
+      setSearchParams((current) => serializeFilters(normalizeFilters(update(parseFilters(current)))), {
+        replace: true,
+        preventScrollReset: true,
+      })
+    },
+    [setSearchParams],
+  )
 
-  const setFilter = useCallback<SetFilter>((key, value) => {
-    setFilters((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }))
-  }, [])
+  const setFilter = useCallback<SetFilter>(
+    (key, value) => updateFilters((current) => ({ ...current, [key]: value })),
+    [updateFilters],
+  )
 
-  const resetFilters = useCallback(() => {
-    setFilters((prev) => ({ ...DEFAULT_FILTERS, sort: prev.sort }))
-  }, [])
+  const setAttributeFilter = useCallback<SetAttributeFilter>(
+    (key, value) =>
+      updateFilters((current) => {
+        const attributes = { ...current.attributes }
+        if (value === null) delete attributes[key]
+        else attributes[key] = value
+        return { ...current, attributes }
+      }),
+    [updateFilters],
+  )
 
-  return {
-    filters,
-    setFilter,
-    resetFilters,
-    activeFilterCount: countActiveFilters(filters),
-  }
+  const resetFilters = useCallback(
+    () => updateFilters((current) => ({ ...DEFAULT_FILTERS, sort: current.sort })),
+    [updateFilters],
+  )
+
+  const chips = useMemo(() => getFilterChips(filters), [filters])
+
+  return { filters, chips, setFilter, setAttributeFilter, updateFilters, resetFilters }
 }

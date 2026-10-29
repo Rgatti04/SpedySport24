@@ -1,18 +1,21 @@
-import { BadgeCheck, ChevronDown, MapPin, Recycle, Search, ShieldCheck, Tag, Trophy, Zap, type LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ArrowRight, ChevronDown, Eye, Layers, ListFilter, MapPin, Search, Store, Trophy, type LucideIcon } from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { buildSearchPath, SEARCH_PATH } from '@/app/paths'
 import { Button } from '@/components/ui/Button'
-import { isCategoryId, isSportId, PRODUCT_CATEGORIES, SPORTS } from '@/config/taxonomy'
-import type { SetFilter } from '@/features/listings/hooks/useListingFilters'
+import { PLACE_NAMES } from '@/config/places'
+import { isSportId, OFFER_GROUPS, SPORTS } from '@/config/taxonomy'
 import { buildImageUrl, buildSrcSet, unsplashPhotoUrl } from '@/lib/images'
-import type { ListingFilters } from '@/types'
+import type { SportId } from '@/types'
 
 const HERO_IMAGE = unsplashPhotoUrl('1552674605-db6ffd4facb5')
 
-const TRUST_POINTS: { icon: LucideIcon; label: string }[] = [
-  { icon: Zap, label: 'Spedizione rapida 24h' },
-  { icon: ShieldCheck, label: 'Pagamento protetto' },
-  { icon: BadgeCheck, label: 'Venditori verificati' },
-  { icon: Recycle, label: 'Sport più sostenibile' },
+/** Solo caratteristiche già presenti nel prodotto: nessuna promessa di servizi non ancora attivi. */
+const VALUE_POINTS: { icon: LucideIcon; label: string }[] = [
+  { icon: ListFilter, label: 'Filtri tecnici per ogni sport' },
+  { icon: Store, label: 'Negozi e privati, ben distinti' },
+  { icon: Layers, label: 'Nuovo, fine serie e usato' },
+  { icon: Eye, label: 'Consultazione libera, senza registrazione' },
 ]
 
 const CONTROL_CLASSES =
@@ -23,11 +26,12 @@ interface SearchFieldProps {
   label: string
   icon: LucideIcon
   children: ReactNode
+  className?: string
 }
 
-function SearchField({ id, label, icon: Icon, children }: SearchFieldProps) {
+function SearchField({ id, label, icon: Icon, children, className }: SearchFieldProps) {
   return (
-    <div className="min-w-0">
+    <div className={className}>
       <label htmlFor={id} className="mb-1.5 block px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </label>
@@ -39,23 +43,17 @@ function SearchField({ id, label, icon: Icon, children }: SearchFieldProps) {
   )
 }
 
-function SelectChevron() {
-  return (
-    <ChevronDown
-      className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-      aria-hidden="true"
-    />
-  )
-}
+export function HeroSection() {
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const [sport, setSport] = useState<SportId | null>(null)
+  const [location, setLocation] = useState('')
 
-interface HeroSectionProps {
-  filters: ListingFilters
-  onFilterChange: SetFilter
-  citySuggestions: string[]
-  onSubmit: () => void
-}
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    navigate(buildSearchPath({ query, sport, location }))
+  }
 
-export function HeroSection({ filters, onFilterChange, citySuggestions, onSubmit }: HeroSectionProps) {
   return (
     <section aria-labelledby="hero-title" className="relative isolate overflow-hidden bg-brand-950">
       <img
@@ -64,12 +62,9 @@ export function HeroSection({ filters, onFilterChange, citySuggestions, onSubmit
         sizes="100vw"
         alt=""
         fetchPriority="high"
-        className="absolute inset-0 -z-20 size-full object-cover opacity-70"
+        className="absolute inset-0 -z-20 size-full object-cover opacity-60"
       />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-linear-to-r from-brand-950 via-brand-900/85 to-brand-700/30"
-      />
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-linear-to-r from-brand-950 via-brand-900/90 to-brand-700/40" />
       {/* Linee di velocità: richiamano il "24" del logo */}
       <div aria-hidden="true" className="pointer-events-none absolute right-8 top-14 hidden flex-col items-end gap-3 lg:flex">
         <span className="h-2.5 w-56 -skew-x-[30deg] rounded-full bg-accent-500" />
@@ -77,82 +72,72 @@ export function HeroSection({ filters, onFilterChange, citySuggestions, onSubmit
         <span className="h-2.5 w-24 -skew-x-[30deg] rounded-full bg-accent-500/50" />
       </div>
 
-      <div className="container-page py-12 sm:py-16 lg:py-24">
+      <div className="container-page py-10 sm:py-14 lg:py-20">
         <div className="max-w-2xl animate-fade-up">
           <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-brand-100 ring-1 ring-white/20 backdrop-blur-sm">
-            <Zap className="size-4 fill-accent-400 text-accent-400" aria-hidden="true" />
-            Il marketplace dell’usato sportivo
+            <Trophy className="size-4 text-accent-400" aria-hidden="true" />
+            Il marketplace di tutto lo sport
           </p>
           <h1
             id="hero-title"
             className="mt-5 font-display text-4xl font-bold italic leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
-            Dai una seconda vita <span className="text-accent-400">al tuo sport.</span>
+            Tutto lo sport. <span className="whitespace-nowrap text-accent-400">Un solo posto.</span>
           </h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-brand-100 sm:text-lg">
-            Compra e vendi attrezzatura sportiva usata tra privati: annunci chiari, venditori verificati e spedizione
-            rapida in 24h in tutta Italia.
+            Trova attrezzatura sportiva nuova, fine serie e usata, proposta da negozi e privati in tutta Italia.
           </p>
         </div>
 
         <form
-          aria-label="Ricerca rapida annunci"
-          onSubmit={(event) => {
-            event.preventDefault()
-            onSubmit()
-          }}
-          className="mt-8 grid animate-fade-up gap-3 rounded-2xl bg-white p-4 shadow-2xl shadow-brand-950/40 [animation-delay:120ms] sm:grid-cols-2 lg:max-w-5xl lg:grid-cols-[1fr_1fr_1.2fr_auto] lg:items-end"
+          role="search"
+          aria-label="Cerca attrezzatura"
+          onSubmit={handleSubmit}
+          className="mt-7 grid animate-fade-up gap-3 rounded-2xl bg-white p-3 shadow-2xl shadow-brand-950/40 [animation-delay:120ms] sm:grid-cols-2 sm:p-4 lg:max-w-5xl lg:grid-cols-[1.6fr_1fr_1fr_auto] lg:items-end"
         >
+          <SearchField id="hero-query" label="Cosa cerchi?" icon={Search} className="sm:col-span-2 lg:col-span-1">
+            <input
+              id="hero-query"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Es. bici gravel, racchetta Babolat, sci 170"
+              autoComplete="off"
+              enterKeyHint="search"
+              className={`${CONTROL_CLASSES} pr-3 placeholder:font-normal placeholder:text-slate-400`}
+            />
+          </SearchField>
+
           <SearchField id="hero-sport" label="Sport" icon={Trophy}>
             <select
               id="hero-sport"
-              value={filters.sport ?? ''}
-              onChange={(event) => onFilterChange('sport', isSportId(event.target.value) ? event.target.value : null)}
+              value={sport ?? ''}
+              onChange={(event) => setSport(isSportId(event.target.value) ? event.target.value : null)}
               className={`${CONTROL_CLASSES} appearance-none pr-9`}
             >
               <option value="">Tutti gli sport</option>
-              {SPORTS.map((sport) => (
-                <option key={sport.id} value={sport.id}>
-                  {sport.label}
+              {SPORTS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
                 </option>
               ))}
             </select>
-            <SelectChevron />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           </SearchField>
 
-          <SearchField id="hero-category" label="Categoria" icon={Tag}>
-            <select
-              id="hero-category"
-              value={filters.category ?? ''}
-              onChange={(event) =>
-                onFilterChange('category', isCategoryId(event.target.value) ? event.target.value : null)
-              }
-              className={`${CONTROL_CLASSES} appearance-none pr-9`}
-            >
-              <option value="">Tutte le categorie</option>
-              {PRODUCT_CATEGORIES.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-            <SelectChevron />
-          </SearchField>
-
-          <SearchField id="hero-location" label="Città o CAP" icon={MapPin}>
+          <SearchField id="hero-location" label="Dove" icon={MapPin}>
             <input
               id="hero-location"
               type="text"
-              inputMode="search"
-              list="hero-city-suggestions"
-              value={filters.location}
-              onChange={(event) => onFilterChange('location', event.target.value)}
-              placeholder="Es. Milano o 20135"
+              list="hero-place-suggestions"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              placeholder="Città o CAP"
               autoComplete="address-level2"
               className={`${CONTROL_CLASSES} pr-3 placeholder:font-normal placeholder:text-slate-400`}
             />
-            <datalist id="hero-city-suggestions">
-              {citySuggestions.map((city) => (
+            <datalist id="hero-place-suggestions">
+              {PLACE_NAMES.map((city) => (
                 <option key={city} value={city} />
               ))}
             </datalist>
@@ -160,12 +145,34 @@ export function HeroSection({ filters, onFilterChange, citySuggestions, onSubmit
 
           <Button type="submit" variant="accent" size="lg" className="h-12 w-full sm:col-span-2 lg:col-span-1 lg:w-auto">
             <Search className="size-5" strokeWidth={2.5} aria-hidden="true" />
-            Cerca
+            Cerca attrezzatura
           </Button>
         </form>
 
+        <nav
+          aria-label="Ricerca per tipologia"
+          className="mt-5 flex animate-fade-up flex-wrap items-center gap-2 [animation-delay:180ms]"
+        >
+          {OFFER_GROUPS.map((group) => (
+            <Link
+              key={group.id}
+              to={buildSearchPath({ offerGroups: [group.id] })}
+              className="rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm transition hover:bg-white hover:text-brand-800"
+            >
+              {group.label}
+            </Link>
+          ))}
+          <Link
+            to={SEARCH_PATH}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-sm font-semibold text-accent-400 underline-offset-4 hover:underline"
+          >
+            Ricerca avanzata
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </nav>
+
         <ul className="mt-8 grid animate-fade-up grid-cols-2 gap-x-6 gap-y-3 text-sm font-medium text-brand-100 [animation-delay:240ms] sm:flex sm:flex-wrap">
-          {TRUST_POINTS.map(({ icon: Icon, label }) => (
+          {VALUE_POINTS.map(({ icon: Icon, label }) => (
             <li key={label} className="flex items-center gap-2">
               <Icon className="size-5 shrink-0 text-accent-400" aria-hidden="true" />
               {label}

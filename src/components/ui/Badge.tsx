@@ -1,11 +1,13 @@
 import type { ComponentProps } from 'react'
 import { cn } from '@/lib/cn'
 
-export type BadgeTone = 'neutral' | 'brand' | 'accent' | 'success' | 'teal' | 'indigo'
+export type BadgeTone = 'neutral' | 'brand' | 'solid' | 'inverse' | 'accent' | 'success' | 'teal' | 'indigo'
 
 const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-slate-100 text-slate-700 ring-slate-500/15',
   brand: 'bg-brand-50 text-brand-700 ring-brand-600/20',
+  solid: 'bg-brand-700 text-white ring-brand-800/30',
+  inverse: 'bg-slate-900/85 text-white ring-white/10 backdrop-blur-sm',
   accent: 'bg-accent-500 text-brand-950 ring-accent-600/30',
   success: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
   teal: 'bg-teal-50 text-teal-700 ring-teal-600/20',

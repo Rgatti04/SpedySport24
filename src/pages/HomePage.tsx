@@ -1,106 +1,86 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Footer } from '@/components/layout/Footer'
-import { Header } from '@/components/layout/Header'
-import { Toast } from '@/components/ui/Toast'
+import { AlertTriangle, RotateCcw } from 'lucide-react'
+import { useMemo } from 'react'
+import { buildSearchPath } from '@/app/paths'
+import { Button } from '@/components/ui/Button'
 import { HeroSection } from '@/features/home/components/HeroSection'
+import { NearbySection } from '@/features/home/components/NearbySection'
+import { SecondoTempoBand } from '@/features/home/components/SecondoTempoBand'
 import { SellCtaBanner } from '@/features/home/components/SellCtaBanner'
+import { SellerTypesSection } from '@/features/home/components/SellerTypesSection'
 import { SportCategoriesSection } from '@/features/home/components/SportCategoriesSection'
-import { ListingDetailModal } from '@/features/listings/components/ListingDetailModal'
-import { ListingsSection } from '@/features/listings/components/ListingsSection'
-import { useFavorites } from '@/features/listings/hooks/useFavorites'
-import { useFilteredListings } from '@/features/listings/hooks/useFilteredListings'
-import { useListingFilters } from '@/features/listings/hooks/useListingFilters'
+import { ListingRail } from '@/features/listings/components/ListingRail'
 import { useListings } from '@/features/listings/hooks/useListings'
-import { countBySport, getCitySuggestions } from '@/features/listings/lib/filterListings'
-import { scrollToSection } from '@/lib/dom'
-import type { Listing, SportId } from '@/types'
+import { countBySport, getOfferGroupOf } from '@/features/listings/lib/filterListings'
+import { usePageMeta } from '@/lib/hooks'
+import type { Listing, ShopSeller } from '@/types'
 
-const RESULTS_SECTION_ID = 'annunci'
+const RAIL_SIZE = 8
+
+function byRecent(a: Listing, b: Listing) {
+  return b.createdAt.localeCompare(a.createdAt)
+}
 
 export function HomePage() {
+  usePageMeta(null)
   const { listings, status, retry } = useListings()
-  const { filters, setFilter, resetFilters } = useListingFilters()
-  const { results, isUpdating } = useFilteredListings(listings, filters)
-  const { isFavorite, toggleFavorite } = useFavorites()
+  const isLoading = status === 'loading'
 
-  const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
-
-  const countsBySport = useMemo(() => (status === 'success' ? countBySport(listings) : null), [listings, status])
-  const citySuggestions = useMemo(() => getCitySuggestions(listings), [listings])
-
-  const dismissToast = useCallback(() => setToast(null), [])
-  const showResults = useCallback(() => scrollToSection(RESULTS_SECTION_ID), [])
-
-  const openListing = useCallback((listing: Listing) => {
-    setSelectedListing(listing)
-    setIsDetailOpen(true)
-  }, [])
-
-  function handleSelectSport(sport: SportId | null) {
-    setFilter('sport', sport)
-    if (sport) showResults()
-  }
+  const sections = useMemo(() => {
+    const active = listings.filter((listing) => listing.status !== 'venduto').sort(byRecent)
+    const shops = new Map<string, ShopSeller>()
+    for (const listing of active) {
+      if (listing.seller.kind === 'negozio') shops.set(listing.seller.id, listing.seller)
+    }
+    return {
+      active,
+      fromShops: active.filter((listing) => getOfferGroupOf(listing) === 'nuovo-fine-serie').slice(0, RAIL_SIZE),
+      latest: active.slice(0, RAIL_SIZE),
+      shops: [...shops.values()],
+    }
+  }, [listings])
 
   return (
     <>
-      <a
-        href={`#${RESULTS_SECTION_ID}`}
-        className="sr-only rounded-lg bg-accent-500 px-4 py-2 font-semibold text-brand-950 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-70"
-      >
-        Vai agli annunci
-      </a>
+      <HeroSection />
+      <SportCategoriesSection countsBySport={status === 'success' ? countBySport(listings) : null} />
 
-      <Header
-        searchQuery={filters.query}
-        onSearchChange={(query) => setFilter('query', query)}
-        onSearchSubmit={showResults}
-        onLoginClick={() => setToast('L’accesso con email, Google e Apple arriverà nella prossima release.')}
-        onSellClick={() => setToast('Il flusso “Vendi Usato” è in sviluppo: presto potrai pubblicare in 2 minuti.')}
-      />
+      {status === 'error' ? (
+        <div className="container-page pt-14">
+          <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center">
+            <AlertTriangle className="size-8 text-brand-600" aria-hidden="true" />
+            <p className="mt-3 font-semibold text-ink">Non siamo riusciti a caricare gli annunci</p>
+            <p className="mt-1 text-sm text-slate-600">Controlla la connessione e riprova tra qualche istante.</p>
+            <Button className="mt-5" onClick={retry}>
+              <RotateCcw className="size-4" aria-hidden="true" />
+              Riprova
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <ListingRail
+            id="dai-negozi"
+            title="Nuovo e fine serie dai negozi"
+            description="Novità, rimanenze e collezioni precedenti, con le condizioni di vendita del negozio."
+            listings={sections.fromShops}
+            isLoading={isLoading}
+            seeAllTo={buildSearchPath({ offerGroups: ['nuovo-fine-serie'] })}
+          />
+          <ListingRail
+            id="appena-pubblicati"
+            title="Appena pubblicati"
+            description="Gli ultimi annunci di negozi e privati."
+            listings={sections.latest}
+            isLoading={isLoading}
+            seeAllTo={buildSearchPath({ sort: 'recent' })}
+          />
+          <NearbySection listings={sections.active} isLoading={isLoading} />
+        </>
+      )}
 
-      <main>
-        <HeroSection
-          filters={filters}
-          onFilterChange={setFilter}
-          citySuggestions={citySuggestions}
-          onSubmit={showResults}
-        />
-        <SportCategoriesSection
-          selectedSport={filters.sport}
-          countsBySport={countsBySport}
-          onSelectSport={handleSelectSport}
-        />
-        <ListingsSection
-          id={RESULTS_SECTION_ID}
-          status={status}
-          listings={results}
-          isUpdating={isUpdating}
-          filters={filters}
-          onFilterChange={setFilter}
-          onResetFilters={resetFilters}
-          onRetry={retry}
-          isFavorite={isFavorite}
-          onToggleFavorite={toggleFavorite}
-          onOpenListing={openListing}
-        />
-        <SellCtaBanner
-          onSellClick={() => setToast('Il flusso “Vendi Usato” è in sviluppo: presto potrai pubblicare in 2 minuti.')}
-        />
-      </main>
-
-      <Footer />
-
-      <ListingDetailModal
-        listing={selectedListing}
-        open={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
-        isFavorite={selectedListing ? isFavorite(selectedListing.id) : false}
-        onToggleFavorite={toggleFavorite}
-      />
-
-      <Toast message={toast} onDismiss={dismissToast} />
+      <SellerTypesSection shops={sections.shops} />
+      <SecondoTempoBand />
+      <SellCtaBanner />
     </>
   )
 }

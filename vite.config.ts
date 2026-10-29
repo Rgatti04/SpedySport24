@@ -17,7 +17,7 @@ export default defineConfig({
         // Vendor chunk separati: cambiano raramente e restano in cache tra un deploy e l'altro.
         codeSplitting: {
           groups: [
-            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|react-router|scheduler|cookie|set-cookie-parser)[\\/]/ },
             { name: 'motion', test: /node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/ },
             { name: 'ui', test: /node_modules[\\/](@headlessui|@floating-ui|@react-aria|@tanstack|lucide-react)[\\/]/ },
           ],

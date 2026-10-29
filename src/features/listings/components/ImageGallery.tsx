@@ -42,14 +42,14 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 
   return (
     <div
-      className="flex h-full flex-col bg-slate-950"
+      className="flex flex-col overflow-hidden rounded-3xl bg-slate-950"
       role="region"
       aria-roledescription="carosello"
       aria-label={`Foto di ${title}`}
       onKeyDown={handleKeyDown}
     >
       <div
-        className="relative aspect-[4/3] overflow-hidden focus-visible:outline-offset-[-3px] lg:aspect-auto lg:flex-1"
+        className="relative aspect-[4/3] overflow-hidden focus-visible:outline-offset-[-3px]"
         tabIndex={hasMany ? 0 : undefined}
         aria-label={hasMany ? 'Usa le frecce sinistra e destra per scorrere le foto' : undefined}
       >
@@ -58,7 +58,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
             key={current.id}
             src={buildImageUrl(current.url, { width: 1000 })}
             srcSet={buildSrcSet(current.url, [640, 1000, 1400])}
-            sizes="(min-width: 1024px) 560px, 100vw"
+            sizes="(min-width: 1280px) 720px, (min-width: 1024px) 58vw, 100vw"
             alt={current.alt}
             draggable={false}
             custom={direction}

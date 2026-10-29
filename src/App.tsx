@@ -1,11 +1,6 @@
-import { MotionConfig } from 'motion/react'
-import { HomePage } from '@/pages/HomePage'
+import { RouterProvider } from 'react-router/dom'
+import { router } from '@/app/router'
 
 export default function App() {
-  return (
-    // Rispetta "Riduci movimento" del sistema operativo per tutte le animazioni.
-    <MotionConfig reducedMotion="user">
-      <HomePage />
-    </MotionConfig>
-  )
+  return <RouterProvider router={router} />
 }

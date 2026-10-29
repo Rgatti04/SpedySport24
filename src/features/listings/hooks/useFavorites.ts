@@ -1,38 +1,30 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import { createStore, readStorage, useStore, writeStorage } from '@/lib/store'
 
 const STORAGE_KEY = 'ss24:favorites'
 
-function readStoredFavorites(): Set<string> {
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '[]')
-    return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [])
-  } catch {
-    return new Set()
-  }
+const favoritesStore = createStore<ReadonlySet<string>>(
+  readStorage(
+    STORAGE_KEY,
+    (raw) => new Set(Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string') : []),
+    new Set<string>(),
+  ),
+)
+
+favoritesStore.subscribe(() => writeStorage(STORAGE_KEY, [...favoritesStore.get()]))
+
+function toggleFavorite(id: string) {
+  favoritesStore.set((previous) => {
+    const next = new Set(previous)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
 }
 
-/** Preferiti salvati in locale. Con l'autenticazione diventeranno una tabella `favorites`. */
+/** Preferiti salvati in locale e condivisi tra le pagine. Con gli account diventeranno una tabella `favorites`. */
 export function useFavorites() {
-  const [favoriteIds, setFavoriteIds] = useState<ReadonlySet<string>>(readStoredFavorites)
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...favoriteIds]))
-    } catch {
-      // Storage non disponibile (navigazione privata, quota piena): i preferiti restano in memoria.
-    }
-  }, [favoriteIds])
-
-  const toggleFavorite = useCallback((id: string) => {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
+  const favoriteIds = useStore(favoritesStore)
   const isFavorite = useCallback((id: string) => favoriteIds.has(id), [favoriteIds])
-
   return { favoriteIds, isFavorite, toggleFavorite }
 }

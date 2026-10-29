@@ -17,9 +17,15 @@ export function formatPrice(priceCents: number): string {
   return priceCents % 100 === 0 ? wholeEuro.format(priceCents / 100) : centsEuro.format(priceCents / 100)
 }
 
-export function discountPercent(priceCents: number, originalPriceCents?: number): number | null {
-  if (!originalPriceCents || originalPriceCents <= priceCents) return null
-  return Math.round((1 - priceCents / originalPriceCents) * 100)
+/** Costo di spedizione: `null` = da concordare con il venditore. */
+export function formatShippingCost(costCents: number | null): string {
+  if (costCents === null) return 'costo da concordare'
+  return costCents === 0 ? 'gratuita' : formatPrice(costCents)
+}
+
+/** "a 3 km", "a 120 km" (distanza in linea d'aria). */
+export function formatDistance(km: number): string {
+  return km < 1 ? 'a meno di 1 km' : `a ${Math.round(km).toLocaleString(LOCALE)} km`
 }
 
 const relativeTime = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' })
